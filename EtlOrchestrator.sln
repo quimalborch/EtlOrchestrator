@@ -1,0 +1,82 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{9DE88AE4-4C12-4743-9D23-FA432C165A7D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{6A9D500E-E036-4C03-A4C3-0656A17D0D53}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EtlOrchestrator.Core", "src\Core\EtlOrchestrator.Core\EtlOrchestrator.Core.csproj", "{D92BE5D0-01D7-48DA-BDC2-3D5AE18E1A12}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Infrastructure", "Infrastructure", "{95A75A9D-7FD1-4FEA-8702-551EFBA1FE97}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EtlOrchestrator.Infrastructure", "src\Infrastructure\EtlOrchestrator.Infrastructure\EtlOrchestrator.Infrastructure.csproj", "{4493DA03-B8A2-4277-9F19-B121449F8863}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Orchestrator.App", "Orchestrator.App", "{7FF0253D-7A28-4C45-A6FB-690C83FCB30A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EtlOrchestrator.Orchestrator.App", "src\Orchestrator.App\EtlOrchestrator.Orchestrator.App\EtlOrchestrator.Orchestrator.App.csproj", "{C54D25F0-CB33-4429-8474-CC4D8705550E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{BD9F9E2A-2899-4F7B-8509-400EB4DD1B21}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core.Tests", "Core.Tests", "{01EA3027-65A7-4481-9176-3A419250FE54}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EtlOrchestrator.Core.Tests", "tests\Core.Tests\EtlOrchestrator.Core.Tests\EtlOrchestrator.Core.Tests.csproj", "{392068FD-5AD5-4F97-A3C2-B3C92F162376}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Infrastructure.Tests", "Infrastructure.Tests", "{09C5DCC1-08C2-45EB-AD40-0C2CE7707600}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EtlOrchestrator.Infrastructure.Tests", "tests\Infrastructure.Tests\EtlOrchestrator.Infrastructure.Tests\EtlOrchestrator.Infrastructure.Tests.csproj", "{E4190B16-3DCD-4556-8DE9-E9DB70A59F7C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Orchestrator.App.Tests", "Orchestrator.App.Tests", "{A7D057DE-2A45-4C7C-A62A-1F6D66551692}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EtlOrchestrator.Orchestrator.App.Tests", "tests\Orchestrator.App.Tests\EtlOrchestrator.Orchestrator.App.Tests\EtlOrchestrator.Orchestrator.App.Tests.csproj", "{4019C2A4-943B-4D87-BA0A-8C92D0D0EA40}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D92BE5D0-01D7-48DA-BDC2-3D5AE18E1A12}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D92BE5D0-01D7-48DA-BDC2-3D5AE18E1A12}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D92BE5D0-01D7-48DA-BDC2-3D5AE18E1A12}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D92BE5D0-01D7-48DA-BDC2-3D5AE18E1A12}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4493DA03-B8A2-4277-9F19-B121449F8863}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4493DA03-B8A2-4277-9F19-B121449F8863}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4493DA03-B8A2-4277-9F19-B121449F8863}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4493DA03-B8A2-4277-9F19-B121449F8863}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C54D25F0-CB33-4429-8474-CC4D8705550E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C54D25F0-CB33-4429-8474-CC4D8705550E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C54D25F0-CB33-4429-8474-CC4D8705550E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C54D25F0-CB33-4429-8474-CC4D8705550E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{392068FD-5AD5-4F97-A3C2-B3C92F162376}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{392068FD-5AD5-4F97-A3C2-B3C92F162376}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{392068FD-5AD5-4F97-A3C2-B3C92F162376}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{392068FD-5AD5-4F97-A3C2-B3C92F162376}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E4190B16-3DCD-4556-8DE9-E9DB70A59F7C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E4190B16-3DCD-4556-8DE9-E9DB70A59F7C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E4190B16-3DCD-4556-8DE9-E9DB70A59F7C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E4190B16-3DCD-4556-8DE9-E9DB70A59F7C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4019C2A4-943B-4D87-BA0A-8C92D0D0EA40}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4019C2A4-943B-4D87-BA0A-8C92D0D0EA40}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4019C2A4-943B-4D87-BA0A-8C92D0D0EA40}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4019C2A4-943B-4D87-BA0A-8C92D0D0EA40}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{6A9D500E-E036-4C03-A4C3-0656A17D0D53} = {9DE88AE4-4C12-4743-9D23-FA432C165A7D}
+		{D92BE5D0-01D7-48DA-BDC2-3D5AE18E1A12} = {6A9D500E-E036-4C03-A4C3-0656A17D0D53}
+		{95A75A9D-7FD1-4FEA-8702-551EFBA1FE97} = {9DE88AE4-4C12-4743-9D23-FA432C165A7D}
+		{4493DA03-B8A2-4277-9F19-B121449F8863} = {95A75A9D-7FD1-4FEA-8702-551EFBA1FE97}
+		{7FF0253D-7A28-4C45-A6FB-690C83FCB30A} = {9DE88AE4-4C12-4743-9D23-FA432C165A7D}
+		{C54D25F0-CB33-4429-8474-CC4D8705550E} = {7FF0253D-7A28-4C45-A6FB-690C83FCB30A}
+		{01EA3027-65A7-4481-9176-3A419250FE54} = {BD9F9E2A-2899-4F7B-8509-400EB4DD1B21}
+		{392068FD-5AD5-4F97-A3C2-B3C92F162376} = {01EA3027-65A7-4481-9176-3A419250FE54}
+		{09C5DCC1-08C2-45EB-AD40-0C2CE7707600} = {BD9F9E2A-2899-4F7B-8509-400EB4DD1B21}
+		{E4190B16-3DCD-4556-8DE9-E9DB70A59F7C} = {09C5DCC1-08C2-45EB-AD40-0C2CE7707600}
+		{A7D057DE-2A45-4C7C-A62A-1F6D66551692} = {BD9F9E2A-2899-4F7B-8509-400EB4DD1B21}
+		{4019C2A4-943B-4D87-BA0A-8C92D0D0EA40} = {A7D057DE-2A45-4C7C-A62A-1F6D66551692}
+	EndGlobalSection
+EndGlobal
