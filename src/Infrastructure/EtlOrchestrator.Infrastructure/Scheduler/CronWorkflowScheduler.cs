@@ -107,8 +107,9 @@ namespace EtlOrchestrator.Infrastructure.Scheduler
             }
             catch (Exception ex)
             {
+                string sanitizedCronExpression = cronExpression.Replace(Environment.NewLine, "").Replace("\n", "").Replace("\r", "");
                 _logger.LogError(ex, "Error al programar el workflow {WorkflowName} con cron {CronExpression}",
-                    workflowName, cronExpression);
+                    workflowName, sanitizedCronExpression);
                 throw;
             }
         }
