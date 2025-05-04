@@ -3,6 +3,7 @@
 A flexible, powerful ETL (Extract, Transform, Load) orchestration framework for .NET applications. ETL Orchestrator helps you build, manage, and monitor data pipelines with ease.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![.NET Tests](https://github.com/quimalborch/EtlOrchestrator/actions/workflows/dotnet-tests.yml/badge.svg)](https://github.com/quimalborch/EtlOrchestrator/actions/workflows/dotnet-tests.yml)
 
 ## Features
 
@@ -216,6 +217,90 @@ The EtlOrchestrator is built on a modular architecture:
 - **Core Layer**: Contains interfaces and models
 - **Infrastructure Layer**: Implements connectors, workflows, persistence, and scheduling
 - **API Layer**: Provides HTTP endpoints for managing workflows (optional)
+
+## Testing
+
+ETL Orchestrator follows best practices for testing, with a comprehensive suite of unit tests ensuring code quality and reliability.
+
+### Test Projects Structure
+
+The solution includes three test projects, each targeting a specific layer of the application:
+
+- **Core.Tests**: Tests for the core domain models (`Record`, `Context`, etc.)
+- **Infrastructure.Tests**: Tests for the infrastructure services, including workflow management and repositories
+- **Orchestrator.App.Tests**: Tests for the API controllers and endpoints
+
+### Running Tests
+
+You can run all tests using the .NET CLI:
+
+```bash
+dotnet test
+```
+
+Or run specific test projects:
+
+```bash
+dotnet test tests/Core.Tests/EtlOrchestrator.Core.Tests/EtlOrchestrator.Core.Tests.csproj
+```
+
+### Test Coverage
+
+Test coverage is automatically calculated during CI/CD builds using the Coverlet library and ReportGenerator. To generate a coverage report locally:
+
+```bash
+dotnet test --collect:"XPlat Code Coverage"
+dotnet tool install -g dotnet-reportgenerator-globaltool
+reportgenerator -reports:"**/coverage.cobertura.xml" -targetdir:"coveragereport" -reporttypes:Html
+```
+
+Then open `coveragereport/index.html` in your browser.
+
+### Testing Approach
+
+Our testing strategy follows industry best practices:
+
+1. **Unit Tests**: Focus on testing individual components in isolation
+2. **Mocking**: Use Moq to create mock dependencies
+3. **Arrange-Act-Assert**: Structure tests with clear setup, action, and verification phases
+4. **Parameterized Tests**: Use xUnit's theory tests for testing multiple data scenarios
+5. **Integration with CI/CD**: Automatic test execution on every push or pull request
+
+### Testing in Open-Source ETL Projects
+
+Here's how other popular open-source ETL projects approach testing:
+
+#### Apache NiFi
+
+- Uses JUnit for extensive unit testing
+- JMeter for performance testing
+- Integration tests that verify end-to-end flows
+- Extensive documentation of testing procedures
+
+#### Apache Airflow
+
+- Uses pytest for Python-based tests
+- Combines unit and integration tests
+- Uses pytest fixtures for test setup
+- Containerized tests using Docker
+
+#### DBT (Data Build Tool)
+
+- Extensive unit test suite using pytest
+- Custom test harnesses for testing SQL transformations
+- Integration tests with multiple database backends
+- Community-driven test contributions
+
+#### Luigi (Spotify)
+
+- Standard Python unittest framework
+- Mock objects for external dependencies
+- Parameterized tests for different scenarios
+- Central test runner for consistency
+
+### Continuous Integration
+
+ETL Orchestrator uses GitHub Actions to automatically run tests on every push and pull request. The workflow configuration can be found in `.github/workflows/dotnet-tests.yml`.
 
 ## Contributing
 
