@@ -85,12 +85,17 @@ namespace EtlOrchestrator.Infrastructure
         /// </summary>
         private static void ConfigureHangfire(IServiceCollection services, IConfiguration configuration)
         {
+            // Obtener la cadena de conexión para Hangfire
+            string connectionString = configuration.GetConnectionString("HangfireConnection") ?? 
+                                     configuration.GetConnectionString("DefaultConnection") ??
+                                     throw new InvalidOperationException("No se encontró una cadena de conexión válida para Hangfire. Verifique que 'HangfireConnection' o 'DefaultConnection' estén configuradas en appsettings.json");
+
             // Configurar Hangfire con SQL Server
             services.AddHangfire(config => config
                 .SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
                 .UseSimpleAssemblyNameTypeSerializer()
                 .UseRecommendedSerializerSettings()
-                .UseSqlServerStorage(configuration.GetConnectionString("HangfireConnection"), 
+                .UseSqlServerStorage(connectionString, 
                     new SqlServerStorageOptions
                     {
                         CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),

@@ -28,6 +28,9 @@ builder.Services.AddControllers();
 // Registrar servicios de infraestructura
 builder.Services.AddInfrastructure(builder.Configuration);
 
+// Registrar HttpClientFactory para HttpApiSourceConnector
+builder.Services.AddHttpClient();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
