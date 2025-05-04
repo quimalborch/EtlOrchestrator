@@ -53,24 +53,14 @@ namespace EtlOrchestrator.Infrastructure.Services
         Task<WorkflowExecution> GetWorkflowExecutionByIdAsync(int id);
 
         /// <summary>
-        /// Obtiene las ejecuciones de un flujo de trabajo específico
+        /// Ejecuta un flujo de trabajo
         /// </summary>
-        Task<IEnumerable<WorkflowExecution>> GetWorkflowExecutionsByDefinitionIdAsync(int workflowDefinitionId);
+        Task<WorkflowExecution> ExecuteWorkflowAsync(int workflowDefinitionId, string inputDataJson);
 
         /// <summary>
-        /// Ejecuta un flujo de trabajo de forma sincrónica
+        /// Obtiene todos los pasos de una ejecución de flujo de trabajo
         /// </summary>
-        Task<WorkflowExecution> ExecuteWorkflowAsync(int workflowDefinitionId, string inputDataJson = null);
-
-        /// <summary>
-        /// Ejecuta un flujo de trabajo de forma asincrónica
-        /// </summary>
-        Task<string> StartWorkflowAsync(int workflowDefinitionId, string inputDataJson = null);
-
-        /// <summary>
-        /// Cancela una ejecución de flujo de trabajo en curso
-        /// </summary>
-        Task<bool> CancelWorkflowExecutionAsync(string instanceId);
+        Task<IEnumerable<WorkflowExecutionStep>> GetWorkflowExecutionStepsAsync(int executionId);
 
         #endregion
 
@@ -87,31 +77,24 @@ namespace EtlOrchestrator.Infrastructure.Services
         Task<WorkflowSchedule> GetWorkflowScheduleByIdAsync(int id);
 
         /// <summary>
-        /// Obtiene las programaciones para un flujo de trabajo específico
-        /// </summary>
-        Task<IEnumerable<WorkflowSchedule>> GetWorkflowSchedulesByDefinitionIdAsync(int workflowDefinitionId);
-
-        /// <summary>
         /// Crea una nueva programación para un flujo de trabajo
         /// </summary>
-        Task<WorkflowSchedule> ScheduleWorkflowAsync(int workflowDefinitionId, string cronExpression, string timeZone, 
-            string description = null, string inputDataJson = null, bool enabled = true, bool runImmediately = false);
+        Task<WorkflowSchedule> CreateWorkflowScheduleAsync(int workflowDefinitionId, string cronExpression, string description, string inputDataJson);
 
         /// <summary>
-        /// Actualiza una programación existente
-        /// </summary>
-        Task<WorkflowSchedule> UpdateWorkflowScheduleAsync(int id, string cronExpression, string timeZone, 
-            string description = null, string inputDataJson = null, bool enabled = true);
-
-        /// <summary>
-        /// Activa o desactiva una programación
+        /// Activa o desactiva una programación de flujo de trabajo
         /// </summary>
         Task<bool> SetWorkflowScheduleStatusAsync(int id, bool enabled);
 
         /// <summary>
-        /// Elimina una programación
+        /// Elimina una programación de flujo de trabajo
         /// </summary>
         Task<bool> DeleteWorkflowScheduleAsync(int id);
+
+        /// <summary>
+        /// Actualiza la información de ejecución de una programación
+        /// </summary>
+        Task UpdateScheduleExecutionInfoAsync(int scheduleId, DateTime lastExecution);
 
         #endregion
 

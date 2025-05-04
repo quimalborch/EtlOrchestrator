@@ -72,7 +72,7 @@ namespace EtlOrchestrator.Infrastructure.Logging
                     WorkflowId = workflowId,
                     InstanceId = instanceId,
                     StepName = stepName,
-                    AdditionalDataJson = additionalData != null ? JsonConvert.SerializeObject(additionalData) : null
+                    AdditionalData = additionalData != null ? JsonConvert.SerializeObject(additionalData) : null
                 };
 
                 // Obtener el repositorio y guardar el log

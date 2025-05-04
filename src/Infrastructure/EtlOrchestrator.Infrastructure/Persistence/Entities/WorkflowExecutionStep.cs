@@ -3,7 +3,7 @@ using System;
 namespace EtlOrchestrator.Infrastructure.Persistence.Entities
 {
     /// <summary>
-    /// Entidad que representa un paso de una ejecución de flujo de trabajo ETL
+    /// Entidad que representa un paso en la ejecución de un flujo de trabajo ETL
     /// </summary>
     public class WorkflowExecutionStep
     {
@@ -23,22 +23,22 @@ namespace EtlOrchestrator.Infrastructure.Persistence.Entities
         public virtual WorkflowExecution WorkflowExecution { get; set; }
 
         /// <summary>
-        /// Nombre del paso de ejecución
+        /// Nombre del paso (ExtractStep, TransformStep, LoadStep, etc.)
         /// </summary>
         public string StepName { get; set; }
 
         /// <summary>
-        /// Tipo del paso (Extracción, Transformación, Carga, etc.)
+        /// Tipo de paso (Extract, Transform, Load)
         /// </summary>
         public string StepType { get; set; }
 
         /// <summary>
-        /// Orden de ejecución dentro del flujo
+        /// Orden de ejecución del paso
         /// </summary>
         public int StepOrder { get; set; }
 
         /// <summary>
-        /// Estado del paso (Pendiente, En ejecución, Completado, Error, etc.)
+        /// Estado actual del paso (En espera, En ejecución, Completado, Error, etc.)
         /// </summary>
         public string Status { get; set; }
 
@@ -53,7 +53,7 @@ namespace EtlOrchestrator.Infrastructure.Persistence.Entities
         public DateTime? EndTime { get; set; }
 
         /// <summary>
-        /// Datos de entrada del paso serializados como JSON
+        /// Datos de entrada para el paso serializados como JSON
         /// </summary>
         public string InputDataJson { get; set; }
 
@@ -63,18 +63,18 @@ namespace EtlOrchestrator.Infrastructure.Persistence.Entities
         public string OutputDataJson { get; set; }
 
         /// <summary>
-        /// Mensaje de error en caso de fallo
-        /// </summary>
-        public string ErrorMessage { get; set; }
-
-        /// <summary>
-        /// Número de registros procesados (si aplica)
+        /// Número de registros procesados en este paso (si aplica)
         /// </summary>
         public int? RecordsProcessed { get; set; }
 
         /// <summary>
-        /// Número de registros con error (si aplica)
+        /// Número de registros con errores en este paso (si aplica)
         /// </summary>
         public int? RecordsWithErrors { get; set; }
+
+        /// <summary>
+        /// Mensaje de error en caso de fallo
+        /// </summary>
+        public string ErrorMessage { get; set; }
     }
 } 

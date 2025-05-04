@@ -3,7 +3,7 @@ using System;
 namespace EtlOrchestrator.Infrastructure.Persistence.Entities
 {
     /// <summary>
-    /// Entidad que representa un registro de log de ejecución de flujos de trabajo
+    /// Entidad que representa un registro de log del flujo de trabajo
     /// </summary>
     public class WorkflowLog
     {
@@ -18,7 +18,7 @@ namespace EtlOrchestrator.Infrastructure.Persistence.Entities
         public DateTime Timestamp { get; set; }
 
         /// <summary>
-        /// Nivel de log (Information, Warning, Error, etc.)
+        /// Nivel de log (Info, Warning, Error, etc.)
         /// </summary>
         public string LogLevel { get; set; }
 
@@ -38,23 +38,23 @@ namespace EtlOrchestrator.Infrastructure.Persistence.Entities
         public string Exception { get; set; }
 
         /// <summary>
-        /// Identificador del flujo de trabajo (si aplica)
+        /// Identificador del flujo de trabajo asociado
         /// </summary>
         public string WorkflowId { get; set; }
 
         /// <summary>
-        /// Identificador de la instancia de ejecución (si aplica)
+        /// Identificador de la instancia del flujo de trabajo
         /// </summary>
         public string InstanceId { get; set; }
 
         /// <summary>
-        /// Nombre del paso donde se generó el log (si aplica)
+        /// Nombre del paso actual del flujo de trabajo
         /// </summary>
         public string StepName { get; set; }
 
         /// <summary>
         /// Datos adicionales serializados como JSON
         /// </summary>
-        public string AdditionalDataJson { get; set; }
+        public string AdditionalData { get; set; }
     }
 } 

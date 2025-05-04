@@ -3,7 +3,7 @@ using System;
 namespace EtlOrchestrator.Infrastructure.Persistence.Entities
 {
     /// <summary>
-    /// Entidad que representa una programación de ejecución de un flujo de trabajo
+    /// Entidad que representa una programación de ejecución periódica de un flujo de trabajo ETL
     /// </summary>
     public class WorkflowSchedule
     {
@@ -23,24 +23,39 @@ namespace EtlOrchestrator.Infrastructure.Persistence.Entities
         public virtual WorkflowDefinition WorkflowDefinition { get; set; }
 
         /// <summary>
-        /// Identificador del trabajo programado (usado por Hangfire)
+        /// Identificador del trabajo en Hangfire
         /// </summary>
         public string JobId { get; set; }
 
         /// <summary>
-        /// Identificador del flujo de trabajo
+        /// Identificador del workflow a ejecutar
         /// </summary>
         public string WorkflowId { get; set; }
 
         /// <summary>
-        /// Expresión cron para la programación
+        /// Expresión cron que define la programación
         /// </summary>
         public string CronExpression { get; set; }
 
         /// <summary>
-        /// Zona horaria para la programación
+        /// Zona horaria para la programación (por defecto UTC)
         /// </summary>
-        public string TimeZone { get; set; }
+        public string TimeZone { get; set; } = "UTC";
+
+        /// <summary>
+        /// Descripción de la programación
+        /// </summary>
+        public string Description { get; set; }
+
+        /// <summary>
+        /// Datos de entrada serializados como JSON
+        /// </summary>
+        public string InputDataJson { get; set; }
+
+        /// <summary>
+        /// Indica si la programación está activa
+        /// </summary>
+        public bool Enabled { get; set; } = true;
 
         /// <summary>
         /// Fecha y hora de creación de la programación
@@ -53,16 +68,6 @@ namespace EtlOrchestrator.Infrastructure.Persistence.Entities
         public DateTime LastModified { get; set; }
 
         /// <summary>
-        /// Indica si la programación está habilitada
-        /// </summary>
-        public bool Enabled { get; set; }
-
-        /// <summary>
-        /// Datos de entrada para la ejecución serializados como JSON
-        /// </summary>
-        public string InputDataJson { get; set; }
-
-        /// <summary>
         /// Fecha y hora de la última ejecución
         /// </summary>
         public DateTime? LastExecution { get; set; }
@@ -71,10 +76,5 @@ namespace EtlOrchestrator.Infrastructure.Persistence.Entities
         /// Fecha y hora de la próxima ejecución programada
         /// </summary>
         public DateTime? NextExecution { get; set; }
-
-        /// <summary>
-        /// Descripción opcional de la programación
-        /// </summary>
-        public string Description { get; set; }
     }
 } 

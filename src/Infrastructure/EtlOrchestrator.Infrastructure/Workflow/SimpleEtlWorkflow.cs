@@ -6,23 +6,10 @@ using EtlOrchestrator.Core.Connectors;
 using Microsoft.Extensions.Logging;
 using WorkflowCore.Interface;
 using WorkflowCore.Models;
+using Newtonsoft.Json;
 
 namespace EtlOrchestrator.Infrastructure.Workflow
 {
-    /// <summary>
-    /// Datos de contexto para el flujo de trabajo ETL
-    /// </summary>
-    public class EtlWorkflowData
-    {
-        public Context Context { get; set; }
-        public IEnumerable<Record> ExtractedRecords { get; set; }
-        public IEnumerable<Record> TransformedRecords { get; set; }
-        public bool Success { get; set; }
-        public string ErrorMessage { get; set; }
-        public DateTime StartTime { get; set; } = DateTime.UtcNow;
-        public DateTime? EndTime { get; set; }
-    }
-
     /// <summary>
     /// Implementación de un flujo de trabajo ETL simple: Extract -> Transform -> Load
     /// </summary>
@@ -55,6 +42,52 @@ namespace EtlOrchestrator.Infrastructure.Workflow
                 {
                     _logger.LogInformation("Iniciando flujo de trabajo ETL: {WorkflowId}", Id);
                     var data = context.Workflow.Data as EtlWorkflowData;
+                    
+                    // Si no se inicializó Context, hacerlo aquí
+                    if (data.Context == null)
+                    {
+                        data.Context = new Context
+                        {
+                            JobName = Id,
+                            ExecutionId = data.ExecutionId.ToString(),
+                            StartTime = DateTime.UtcNow
+                        };
+                    }
+                    
+                    // Deserializar la configuración si es necesario
+                    if (!string.IsNullOrEmpty(data.Configuration))
+                    {
+                        try
+                        {
+                            var config = JsonConvert.DeserializeObject<Dictionary<string, object>>(data.Configuration);
+                            foreach (var key in config.Keys)
+                            {
+                                data.Context.SetParameter(key, config[key]);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Error al deserializar la configuración del workflow");
+                        }
+                    }
+                    
+                    // Deserializar los datos de entrada si es necesario
+                    if (!string.IsNullOrEmpty(data.InputData))
+                    {
+                        try
+                        {
+                            var inputData = JsonConvert.DeserializeObject<Dictionary<string, object>>(data.InputData);
+                            foreach (var key in inputData.Keys)
+                            {
+                                data.Context.SetParameter("input_" + key, inputData[key]);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Error al deserializar los datos de entrada del workflow");
+                        }
+                    }
+                    
                     data.StartTime = DateTime.UtcNow;
                     data.Success = true;
                 })

@@ -48,22 +48,30 @@ namespace EtlOrchestrator.Infrastructure.Services
         {
             try
             {
-                // Validar que el JSON de configuración sea válido
-                ValidateConfigurationJson(configurationJson);
+                _logger.LogInformation("Creando nueva definición de workflow: {Name}", name);
+                
+                // Validar que el JSON sea válido
+                if (!string.IsNullOrEmpty(configurationJson))
+                {
+                    JsonConvert.DeserializeObject(configurationJson);
+                }
 
-                var workflowDefinition = new WorkflowDefinition
+                var definition = new WorkflowDefinition
                 {
                     Name = name,
                     Description = description,
                     ConfigurationJson = configurationJson,
+                    Version = 1,
+                    Created = DateTime.UtcNow,
+                    LastModified = DateTime.UtcNow,
                     IsActive = true
                 };
 
-                return await _repository.CreateWorkflowDefinitionAsync(workflowDefinition);
+                return await _repository.CreateWorkflowDefinitionAsync(definition);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al crear la definición de flujo de trabajo {Name}", name);
+                _logger.LogError(ex, "Error al crear definición de workflow");
                 throw;
             }
         }
@@ -72,30 +80,44 @@ namespace EtlOrchestrator.Infrastructure.Services
         {
             try
             {
-                var existingDefinition = await _repository.GetWorkflowDefinitionByIdAsync(id);
-                if (existingDefinition == null)
+                var definition = await _repository.GetWorkflowDefinitionByIdAsync(id);
+                if (definition == null)
                 {
-                    throw new ArgumentException($"No se encontró la definición de flujo de trabajo con ID {id}");
+                    throw new KeyNotFoundException($"No se encontró la definición de workflow con ID {id}");
                 }
 
-                // Validar que el JSON de configuración sea válido
-                ValidateConfigurationJson(configurationJson);
+                // Validar que el JSON sea válido
+                if (!string.IsNullOrEmpty(configurationJson))
+                {
+                    JsonConvert.DeserializeObject(configurationJson);
+                }
 
-                existingDefinition.Description = description;
-                existingDefinition.ConfigurationJson = configurationJson;
+                // Actualizar propiedades
+                definition.Description = description;
+                definition.ConfigurationJson = configurationJson;
+                definition.LastModified = DateTime.UtcNow;
+                definition.Version += 1; // Incrementar versión
 
-                return await _repository.UpdateWorkflowDefinitionAsync(existingDefinition);
+                return await _repository.UpdateWorkflowDefinitionAsync(definition);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al actualizar la definición de flujo de trabajo con ID {Id}", id);
+                _logger.LogError(ex, "Error al actualizar definición de workflow con ID {Id}", id);
                 throw;
             }
         }
 
         public async Task<bool> SetWorkflowDefinitionStatusAsync(int id, bool isActive)
         {
-            return await _repository.SetWorkflowDefinitionStatusAsync(id, isActive);
+            try
+            {
+                return await _repository.SetWorkflowDefinitionStatusAsync(id, isActive);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cambiar el estado de la definición de workflow con ID {Id}", id);
+                throw;
+            }
         }
 
         #endregion
@@ -112,196 +134,82 @@ namespace EtlOrchestrator.Infrastructure.Services
             return await _repository.GetWorkflowExecutionByIdAsync(id);
         }
 
-        public async Task<IEnumerable<WorkflowExecution>> GetWorkflowExecutionsByDefinitionIdAsync(int workflowDefinitionId)
-        {
-            return await _repository.GetWorkflowExecutionsByDefinitionIdAsync(workflowDefinitionId);
-        }
-
-        public async Task<WorkflowExecution> ExecuteWorkflowAsync(int workflowDefinitionId, string inputDataJson = null)
+        public async Task<WorkflowExecution> ExecuteWorkflowAsync(int workflowDefinitionId, string inputDataJson)
         {
             try
             {
                 var definition = await _repository.GetWorkflowDefinitionByIdAsync(workflowDefinitionId);
                 if (definition == null)
                 {
-                    throw new ArgumentException($"No se encontró la definición de flujo de trabajo con ID {workflowDefinitionId}");
+                    throw new KeyNotFoundException($"No se encontró la definición de workflow con ID {workflowDefinitionId}");
                 }
 
                 if (!definition.IsActive)
                 {
-                    throw new InvalidOperationException($"La definición de flujo de trabajo con ID {workflowDefinitionId} no está activa");
+                    throw new InvalidOperationException("No se puede ejecutar un workflow inactivo");
                 }
 
-                // Crear registro de ejecución en la base de datos
+                // Crear registro de ejecución
                 var execution = new WorkflowExecution
                 {
                     WorkflowDefinitionId = workflowDefinitionId,
-                    WorkflowId = definition.Name,
-                    InputDataJson = inputDataJson,
-                    Status = "Iniciando"
+                    StartTime = DateTime.UtcNow,
+                    Status = "Iniciando",
+                    InputDataJson = inputDataJson
                 };
 
                 execution = await _repository.CreateWorkflowExecutionAsync(execution);
 
-                try
+                // Iniciar el workflow en WorkflowCore
+                var data = new Workflow.EtlWorkflowData
                 {
-                    // Preparar datos de entrada
-                    var dataObj = PrepareWorkflowData(definition, inputDataJson, execution.Id);
-
-                    // Generar un instanceId único
-                    var instanceId = Guid.NewGuid().ToString();
-                    execution.InstanceId = instanceId;
-                    await _repository.UpdateWorkflowExecutionAsync(execution);
-
-                    // Registrar inicio de la ejecución
-                    _logger.LogInformation("Iniciando ejecución de flujo de trabajo {Name} con instancia {InstanceId}",
-                        definition.Name, instanceId);
-
-                    // Iniciar el workflow y esperar a que complete
-                    await _repository.UpdateWorkflowExecutionStatusAsync(execution.Id, "En ejecución");
-                    
-                    var workflowId = await _workflowHost.StartWorkflow(definition.Name, version: definition.Version, data: dataObj, reference: instanceId);
-                    
-                    // Esperar a que el workflow termine
-                    bool isComplete = false;
-                    while (!isComplete)
+                    ExecutionId = execution.Id,
+                    Configuration = definition.ConfigurationJson,
+                    InputData = inputDataJson,
+                    Context = new Core.Context
                     {
-                        await Task.Delay(500);
-                        
-                        // Intentar obtener la información del workflow - si no se puede obtener, significa que ha terminado
-                        try
-                        {
-                            // Si no hay excepción, el workflow sigue en ejecución
-                            await _workflowHost.SuspendWorkflow(instanceId);
-                            await _workflowHost.ResumeWorkflow(instanceId);
-                        }
-                        catch
-                        {
-                            // Si hay excepción, el workflow ha terminado
-                            isComplete = true;
-                        }
-                    }
-
-                    // Actualizar el estado de la ejecución
-                    var finalStatus = "Completado";
-                    await _repository.CompleteWorkflowExecutionAsync(execution.Id, finalStatus, DateTime.UtcNow);
-
-                    // Recargar la ejecución para tener los datos actualizados
-                    execution = await _repository.GetWorkflowExecutionByIdAsync(execution.Id);
-
-                    _logger.LogInformation("Completada ejecución de flujo de trabajo {Name} con instancia {InstanceId} y estado {Status}",
-                        definition.Name, instanceId, finalStatus);
-
-                    return execution;
-                }
-                catch (Exception ex)
-                {
-                    // En caso de error, actualizar el estado de la ejecución
-                    await _repository.CompleteWorkflowExecutionAsync(execution.Id, "Error", DateTime.UtcNow, errorMessage: ex.Message);
-                    
-                    _logger.LogError(ex, "Error al ejecutar el flujo de trabajo {Name} con instancia {InstanceId}",
-                        definition.Name, execution.InstanceId);
-                    
-                    throw;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al ejecutar el flujo de trabajo con ID {Id}", workflowDefinitionId);
-                throw;
-            }
-        }
-
-        public async Task<string> StartWorkflowAsync(int workflowDefinitionId, string inputDataJson = null)
-        {
-            try
-            {
-                var definition = await _repository.GetWorkflowDefinitionByIdAsync(workflowDefinitionId);
-                if (definition == null)
-                {
-                    throw new ArgumentException($"No se encontró la definición de flujo de trabajo con ID {workflowDefinitionId}");
-                }
-
-                if (!definition.IsActive)
-                {
-                    throw new InvalidOperationException($"La definición de flujo de trabajo con ID {workflowDefinitionId} no está activa");
-                }
-
-                // Crear registro de ejecución en la base de datos
-                var execution = new WorkflowExecution
-                {
-                    WorkflowDefinitionId = workflowDefinitionId,
-                    WorkflowId = definition.Name,
-                    InputDataJson = inputDataJson,
-                    Status = "Pendiente"
+                        JobName = definition.Name,
+                        ExecutionId = execution.Id.ToString(),
+                        StartTime = DateTime.UtcNow
+                    },
+                    StartTime = DateTime.UtcNow,
+                    Success = true
                 };
 
-                execution = await _repository.CreateWorkflowExecutionAsync(execution);
+                var workflowId = definition.Name;
+                var instanceId = await _workflowHost.StartWorkflow(workflowId, data);
 
-                try
-                {
-                    // Preparar datos de entrada
-                    var dataObj = PrepareWorkflowData(definition, inputDataJson, execution.Id);
+                // Actualizar la ejecución con los IDs de WorkflowCore
+                execution.WorkflowId = workflowId;
+                execution.InstanceId = instanceId;
+                execution.Status = "En ejecución";
+                
+                await _repository.UpdateWorkflowExecutionAsync(execution);
 
-                    // Generar un instanceId único
-                    var instanceId = Guid.NewGuid().ToString();
-                    execution.InstanceId = instanceId;
-                    await _repository.UpdateWorkflowExecutionAsync(execution);
-
-                    // Iniciar el workflow de forma asíncrona
-                    await _repository.UpdateWorkflowExecutionStatusAsync(execution.Id, "Iniciando");
-                    
-                    var workflowId = await _workflowHost.StartWorkflow(definition.Name, version: definition.Version, data: dataObj, reference: instanceId);
-                    
-                    await _repository.UpdateWorkflowExecutionStatusAsync(execution.Id, "En ejecución");
-
-                    _logger.LogInformation("Iniciado flujo de trabajo {Name} con instancia {InstanceId} de forma asíncrona",
-                        definition.Name, instanceId);
-
-                    return instanceId;
-                }
-                catch (Exception ex)
-                {
-                    // En caso de error, actualizar el estado de la ejecución
-                    await _repository.CompleteWorkflowExecutionAsync(execution.Id, "Error", DateTime.UtcNow, errorMessage: ex.Message);
-                    
-                    _logger.LogError(ex, "Error al iniciar el flujo de trabajo {Name}",
-                        definition.Name);
-                    
-                    throw;
-                }
+                return execution;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al iniciar el flujo de trabajo con ID {Id}", workflowDefinitionId);
+                _logger.LogError(ex, "Error al ejecutar workflow con ID {Id}", workflowDefinitionId);
                 throw;
             }
         }
 
-        public async Task<bool> CancelWorkflowExecutionAsync(string instanceId)
+        public async Task<IEnumerable<WorkflowExecutionStep>> GetWorkflowExecutionStepsAsync(int executionId)
         {
             try
             {
-                var execution = await _repository.GetWorkflowExecutionByInstanceIdAsync(instanceId);
+                var execution = await _repository.GetWorkflowExecutionByIdAsync(executionId);
                 if (execution == null)
                 {
-                    _logger.LogWarning("No se encontró la ejecución con InstanceId {InstanceId}", instanceId);
-                    return false;
+                    throw new KeyNotFoundException($"No se encontró la ejecución con ID {executionId}");
                 }
 
-                // Intentar terminar la ejecución en WorkflowCore
-                await _workflowHost.TerminateWorkflow(instanceId);
-
-                // Actualizar el estado en la base de datos
-                await _repository.CompleteWorkflowExecutionAsync(execution.Id, "Cancelado", DateTime.UtcNow);
-
-                _logger.LogInformation("Cancelada ejecución de flujo de trabajo con instancia {InstanceId}", instanceId);
-
-                return true;
+                return await _repository.GetWorkflowExecutionStepsByExecutionIdAsync(executionId);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al cancelar la ejecución con instancia {InstanceId}", instanceId);
+                _logger.LogError(ex, "Error al obtener los pasos de ejecución para la ejecución con ID {Id}", executionId);
                 throw;
             }
         }
@@ -320,113 +228,62 @@ namespace EtlOrchestrator.Infrastructure.Services
             return await _repository.GetWorkflowScheduleByIdAsync(id);
         }
 
-        public async Task<IEnumerable<WorkflowSchedule>> GetWorkflowSchedulesByDefinitionIdAsync(int workflowDefinitionId)
-        {
-            return await _repository.GetWorkflowSchedulesByDefinitionIdAsync(workflowDefinitionId);
-        }
-
-        public async Task<WorkflowSchedule> ScheduleWorkflowAsync(int workflowDefinitionId, string cronExpression, string timeZone, 
-            string description = null, string inputDataJson = null, bool enabled = true, bool runImmediately = false)
+        public async Task<WorkflowSchedule> CreateWorkflowScheduleAsync(int workflowDefinitionId, string cronExpression, string description, string inputDataJson)
         {
             try
             {
                 var definition = await _repository.GetWorkflowDefinitionByIdAsync(workflowDefinitionId);
                 if (definition == null)
                 {
-                    throw new ArgumentException($"No se encontró la definición de flujo de trabajo con ID {workflowDefinitionId}");
+                    throw new KeyNotFoundException($"No se encontró la definición de workflow con ID {workflowDefinitionId}");
                 }
 
                 if (!definition.IsActive)
                 {
-                    throw new InvalidOperationException($"La definición de flujo de trabajo con ID {workflowDefinitionId} no está activa");
+                    throw new InvalidOperationException("No se puede programar un workflow inactivo");
                 }
 
-                // Generar un jobId único
-                var jobId = $"{definition.Name.Replace(" ", "-")}-{Guid.NewGuid().ToString().Substring(0, 8)}";
-
-                // Crear la configuración de programación
-                var config = new WorkflowScheduleConfig
+                // Validar expresión cron
+                if (string.IsNullOrEmpty(cronExpression))
                 {
-                    JobId = jobId,
-                    WorkflowId = definition.Name,
-                    WorkflowVersion = definition.Version,
-                    CronExpression = cronExpression,
-                    TimeZone = timeZone,
-                    InputData = inputDataJson,
-                    RunImmediately = runImmediately
-                };
+                    throw new ArgumentException("La expresión cron no puede estar vacía");
+                }
 
-                // Programar el trabajo en Hangfire
-                _scheduler.ScheduleWorkflow(config);
-
-                // Crear el registro de programación en la base de datos
+                // Crear una nueva programación
                 var schedule = new WorkflowSchedule
                 {
                     WorkflowDefinitionId = workflowDefinitionId,
-                    JobId = jobId,
                     WorkflowId = definition.Name,
                     CronExpression = cronExpression,
-                    TimeZone = timeZone,
+                    TimeZone = "UTC", // Usar UTC como zona horaria por defecto
                     Description = description,
                     InputDataJson = inputDataJson,
-                    Enabled = enabled,
-                    NextExecution = _scheduler.GetNextExecution(jobId)
+                    Created = DateTime.UtcNow,
+                    LastModified = DateTime.UtcNow,
+                    Enabled = true
                 };
 
-                return await _repository.CreateWorkflowScheduleAsync(schedule);
+                // Guardar en base de datos
+                schedule = await _repository.CreateWorkflowScheduleAsync(schedule);
+
+                // Programar con Hangfire
+                var jobId = _scheduler.ScheduleWorkflow(
+                    workflowDefinitionId, 
+                    definition.Name,
+                    schedule.Id,
+                    cronExpression,
+                    inputDataJson);
+
+                // Actualizar con el ID del trabajo de Hangfire
+                schedule.JobId = jobId;
+                schedule.NextExecution = _scheduler.GetNextExecutionTime(cronExpression);
+                await _repository.UpdateWorkflowScheduleAsync(schedule);
+
+                return schedule;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al programar el flujo de trabajo con ID {Id}", workflowDefinitionId);
-                throw;
-            }
-        }
-
-        public async Task<WorkflowSchedule> UpdateWorkflowScheduleAsync(int id, string cronExpression, string timeZone, 
-            string description = null, string inputDataJson = null, bool enabled = true)
-        {
-            try
-            {
-                var schedule = await _repository.GetWorkflowScheduleByIdAsync(id);
-                if (schedule == null)
-                {
-                    throw new ArgumentException($"No se encontró la programación con ID {id}");
-                }
-
-                var definition = await _repository.GetWorkflowDefinitionByIdAsync(schedule.WorkflowDefinitionId);
-                if (definition == null)
-                {
-                    throw new ArgumentException($"No se encontró la definición de flujo de trabajo asociada a la programación");
-                }
-
-                // Actualizar la programación en la base de datos
-                schedule.CronExpression = cronExpression;
-                schedule.TimeZone = timeZone;
-                schedule.Description = description;
-                schedule.InputDataJson = inputDataJson;
-                schedule.Enabled = enabled;
-
-                // Actualizar la programación en Hangfire
-                var config = new WorkflowScheduleConfig
-                {
-                    JobId = schedule.JobId,
-                    WorkflowId = definition.Name,
-                    WorkflowVersion = definition.Version,
-                    CronExpression = cronExpression,
-                    TimeZone = timeZone,
-                    InputData = inputDataJson
-                };
-
-                _scheduler.UpdateSchedule(config);
-
-                // Actualizar la próxima ejecución
-                schedule.NextExecution = _scheduler.GetNextExecution(schedule.JobId);
-
-                return await _repository.UpdateWorkflowScheduleAsync(schedule);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al actualizar la programación con ID {Id}", id);
+                _logger.LogError(ex, "Error al crear programación para workflow con ID {Id}", workflowDefinitionId);
                 throw;
             }
         }
@@ -438,39 +295,42 @@ namespace EtlOrchestrator.Infrastructure.Services
                 var schedule = await _repository.GetWorkflowScheduleByIdAsync(id);
                 if (schedule == null)
                 {
-                    _logger.LogWarning("No se encontró la programación con ID {Id}", id);
-                    return false;
+                    throw new KeyNotFoundException($"No se encontró la programación con ID {id}");
                 }
 
-                // Actualizar el estado en la base de datos
-                var result = await _repository.SetWorkflowScheduleStatusAsync(id, enabled);
-
-                // Si se deshabilitó, eliminar la programación en Hangfire
-                if (!enabled)
+                if (enabled)
                 {
-                    _scheduler.UnscheduleWorkflow(schedule.JobId);
+                    // Habilitar programación
+                    if (!string.IsNullOrEmpty(schedule.JobId))
+                    {
+                        _scheduler.DeleteJob(schedule.JobId);
+                    }
+
+                    var definition = await _repository.GetWorkflowDefinitionByIdAsync(schedule.WorkflowDefinitionId);
+                    var jobId = _scheduler.ScheduleWorkflow(
+                        schedule.WorkflowDefinitionId,
+                        schedule.WorkflowId,
+                        schedule.Id,
+                        schedule.CronExpression,
+                        schedule.InputDataJson);
+
+                    schedule.JobId = jobId;
+                    schedule.NextExecution = _scheduler.GetNextExecutionTime(schedule.CronExpression);
+                    await _repository.UpdateWorkflowScheduleAsync(schedule);
                 }
                 else
                 {
-                    // Si se habilitó, volver a programar en Hangfire
-                    var definition = await _repository.GetWorkflowDefinitionByIdAsync(schedule.WorkflowDefinitionId);
-                    if (definition != null)
+                    // Deshabilitar programación
+                    if (!string.IsNullOrEmpty(schedule.JobId))
                     {
-                        var config = new WorkflowScheduleConfig
-                        {
-                            JobId = schedule.JobId,
-                            WorkflowId = definition.Name,
-                            WorkflowVersion = definition.Version,
-                            CronExpression = schedule.CronExpression,
-                            TimeZone = schedule.TimeZone,
-                            InputData = schedule.InputDataJson
-                        };
-
-                        _scheduler.ScheduleWorkflow(config);
+                        _scheduler.DeleteJob(schedule.JobId);
+                        schedule.JobId = null;
+                        schedule.NextExecution = null;
+                        await _repository.UpdateWorkflowScheduleAsync(schedule);
                     }
                 }
 
-                return result;
+                return await _repository.SetWorkflowScheduleStatusAsync(id, enabled);
             }
             catch (Exception ex)
             {
@@ -486,19 +346,49 @@ namespace EtlOrchestrator.Infrastructure.Services
                 var schedule = await _repository.GetWorkflowScheduleByIdAsync(id);
                 if (schedule == null)
                 {
-                    _logger.LogWarning("No se encontró la programación con ID {Id}", id);
-                    return false;
+                    throw new KeyNotFoundException($"No se encontró la programación con ID {id}");
                 }
 
-                // Eliminar la programación en Hangfire
-                _scheduler.UnscheduleWorkflow(schedule.JobId);
+                // Eliminar trabajo de Hangfire
+                if (!string.IsNullOrEmpty(schedule.JobId))
+                {
+                    _scheduler.DeleteJob(schedule.JobId);
+                }
 
-                // Eliminar el registro de la base de datos
                 return await _repository.DeleteWorkflowScheduleAsync(id);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al eliminar la programación con ID {Id}", id);
+                _logger.LogError(ex, "Error al eliminar programación con ID {Id}", id);
+                throw;
+            }
+        }
+
+        public async Task UpdateScheduleExecutionInfoAsync(int scheduleId, DateTime lastExecution)
+        {
+            try
+            {
+                var schedule = await _repository.GetWorkflowScheduleByIdAsync(scheduleId);
+                if (schedule == null)
+                {
+                    throw new KeyNotFoundException($"No se encontró la programación con ID {scheduleId}");
+                }
+
+                // Calcular la próxima ejecución
+                var nextExecution = _scheduler.GetNextExecutionTime(schedule.CronExpression);
+
+                // Actualizar metadatos de la programación
+                await _repository.UpdateWorkflowScheduleExecutionMetadataAsync(
+                    scheduleId,
+                    lastExecution,
+                    nextExecution);
+
+                _logger.LogInformation("Actualizada información de ejecución para la programación {ScheduleId}, última ejecución: {LastExecution}, próxima ejecución: {NextExecution}",
+                    scheduleId, lastExecution, nextExecution);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al actualizar información de ejecución para la programación {ScheduleId}", scheduleId);
                 throw;
             }
         }

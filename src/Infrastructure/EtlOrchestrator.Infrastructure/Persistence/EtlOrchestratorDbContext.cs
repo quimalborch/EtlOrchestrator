@@ -120,9 +120,11 @@ namespace EtlOrchestrator.Infrastructure.Persistence
                 entity.Property(e => e.LogLevel).IsRequired().HasMaxLength(20);
                 entity.Property(e => e.Category).HasMaxLength(100);
                 entity.Property(e => e.Message).IsRequired();
+                entity.Property(e => e.Exception).HasMaxLength(4000);
                 entity.Property(e => e.WorkflowId).HasMaxLength(100);
                 entity.Property(e => e.InstanceId).HasMaxLength(100);
                 entity.Property(e => e.StepName).HasMaxLength(100);
+                entity.Property(e => e.AdditionalData).HasMaxLength(4000);
                 
                 // Índices para consultas comunes
                 entity.HasIndex(e => e.Timestamp);

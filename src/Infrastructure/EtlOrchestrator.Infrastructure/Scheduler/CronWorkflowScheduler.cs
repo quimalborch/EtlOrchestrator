@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Cronos;
 using EtlOrchestrator.Core;
+using EtlOrchestrator.Infrastructure.Services;
+using EtlWorkflowRepo = EtlOrchestrator.Infrastructure.Persistence.Repositories;
 using Hangfire;
 using Microsoft.Extensions.Logging;
 using WorkflowCore.Interface;
@@ -50,74 +53,88 @@ namespace EtlOrchestrator.Infrastructure.Scheduler
     }
 
     /// <summary>
-    /// Programador de flujos de trabajo basado en expresiones Cron utilizando Hangfire
+    /// Programador de workflows basado en expresiones cron utilizando Hangfire
     /// </summary>
     public class CronWorkflowScheduler
     {
-        private readonly IWorkflowHost _workflowHost;
-        private readonly IRecurringJobManager _recurringJobManager;
         private readonly ILogger<CronWorkflowScheduler> _logger;
-        
-        // Registro de trabajos programados
-        private readonly Dictionary<string, WorkflowScheduleConfig> _scheduledJobs = new Dictionary<string, WorkflowScheduleConfig>();
+        private readonly IRecurringJobManager _recurringJobManager;
+        private readonly IBackgroundJobClient _backgroundJobClient;
 
         public CronWorkflowScheduler(
-            IWorkflowHost workflowHost,
+            ILogger<CronWorkflowScheduler> logger,
             IRecurringJobManager recurringJobManager,
-            ILogger<CronWorkflowScheduler> logger)
+            IBackgroundJobClient backgroundJobClient)
         {
-            _workflowHost = workflowHost ?? throw new ArgumentNullException(nameof(workflowHost));
-            _recurringJobManager = recurringJobManager ?? throw new ArgumentNullException(nameof(recurringJobManager));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _recurringJobManager = recurringJobManager ?? throw new ArgumentNullException(nameof(recurringJobManager));
+            _backgroundJobClient = backgroundJobClient ?? throw new ArgumentNullException(nameof(backgroundJobClient));
         }
 
         /// <summary>
-        /// Programa un flujo de trabajo para ejecutarse según una expresión Cron
+        /// Programa la ejecución recurrente de un workflow
         /// </summary>
-        /// <param name="config">Configuración del trabajo programado</param>
-        public void ScheduleWorkflow(WorkflowScheduleConfig config)
+        /// <param name="workflowDefinitionId">ID de la definición del workflow</param>
+        /// <param name="workflowName">Nombre del workflow</param>
+        /// <param name="scheduleId">ID de la programación</param>
+        /// <param name="cronExpression">Expresión cron</param>
+        /// <param name="inputDataJson">Datos de entrada en formato JSON</param>
+        /// <returns>ID del trabajo programado</returns>
+        public string ScheduleWorkflow(
+            int workflowDefinitionId,
+            string workflowName,
+            int scheduleId,
+            string cronExpression,
+            string inputDataJson)
         {
-            if (config == null)
-                throw new ArgumentNullException(nameof(config));
-                
-            if (string.IsNullOrEmpty(config.JobId))
-                throw new ArgumentException("El ID del trabajo es obligatorio", nameof(config.JobId));
-                
-            if (string.IsNullOrEmpty(config.WorkflowId))
-                throw new ArgumentException("El ID del flujo de trabajo es obligatorio", nameof(config.WorkflowId));
-                
-            if (string.IsNullOrEmpty(config.CronExpression))
-                throw new ArgumentException("La expresión Cron es obligatoria", nameof(config.CronExpression));
-                
-            // Validar la expresión Cron
             try
             {
-                CronExpression.Parse(config.CronExpression);
+                // Generar un ID único para el trabajo
+                string jobId = $"workflow-{workflowDefinitionId}-schedule-{scheduleId}";
+
+                // Registrar el trabajo recurrente en Hangfire
+                _recurringJobManager.AddOrUpdate<WorkflowExecutionJob>(
+                    jobId,
+                    job => job.ExecuteWorkflowAsync(workflowDefinitionId, scheduleId, workflowName, inputDataJson),
+                    cronExpression);
+
+                _logger.LogInformation("Workflow {WorkflowName} programado con cron {CronExpression}, jobId: {JobId}",
+                    workflowName, cronExpression, jobId);
+
+                return jobId;
             }
             catch (Exception ex)
             {
-                throw new ArgumentException($"Expresión Cron inválida: {ex.Message}", nameof(config.CronExpression));
+                _logger.LogError(ex, "Error al programar el workflow {WorkflowName} con cron {CronExpression}",
+                    workflowName, cronExpression);
+                throw;
             }
-            
-            // Registrar el trabajo programado
-            _scheduledJobs[config.JobId] = config;
-            
-            // Crear el trabajo recurrente en Hangfire
-            _recurringJobManager.AddOrUpdate(
-                config.JobId,
-                () => ExecuteWorkflow(config.JobId),
-                config.CronExpression,
-                TimeZoneInfo.FindSystemTimeZoneById(config.TimeZone)
-            );
-            
-            _logger.LogInformation("Trabajo programado: {JobId}, Workflow: {WorkflowId}, Cron: {CronExpression}, TimeZone: {TimeZone}",
-                config.JobId, config.WorkflowId, config.CronExpression, config.TimeZone);
-                
-            // Ejecutar inmediatamente si es necesario
-            if (config.RunImmediately)
+        }
+
+        /// <summary>
+        /// Ejecuta un workflow inmediatamente
+        /// </summary>
+        /// <param name="workflowDefinitionId">ID de la definición del workflow</param>
+        /// <param name="inputDataJson">Datos de entrada en formato JSON</param>
+        /// <returns>ID del trabajo creado</returns>
+        public string ExecuteWorkflowNow(int workflowDefinitionId, string inputDataJson)
+        {
+            try
             {
-                _logger.LogInformation("Ejecutando trabajo inmediatamente: {JobId}", config.JobId);
-                BackgroundJob.Enqueue(() => ExecuteWorkflow(config.JobId));
+                // Encolar un trabajo para ejecución inmediata
+                string jobId = _backgroundJobClient.Enqueue<WorkflowExecutionJob>(
+                    job => job.ExecuteWorkflowAsync(workflowDefinitionId, null, null, inputDataJson));
+
+                _logger.LogInformation("Workflow {WorkflowDefinitionId} encolado para ejecución inmediata, jobId: {JobId}",
+                    workflowDefinitionId, jobId);
+
+                return jobId;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al encolar el workflow {WorkflowDefinitionId} para ejecución inmediata",
+                    workflowDefinitionId);
+                throw;
             }
         }
 
@@ -125,115 +142,98 @@ namespace EtlOrchestrator.Infrastructure.Scheduler
         /// Elimina un trabajo programado
         /// </summary>
         /// <param name="jobId">ID del trabajo a eliminar</param>
-        public void UnscheduleWorkflow(string jobId)
+        public void DeleteJob(string jobId)
         {
-            if (string.IsNullOrEmpty(jobId))
-                throw new ArgumentException("El ID del trabajo es obligatorio", nameof(jobId));
-                
-            if (_scheduledJobs.ContainsKey(jobId))
+            try
             {
                 _recurringJobManager.RemoveIfExists(jobId);
-                _scheduledJobs.Remove(jobId);
-                
-                _logger.LogInformation("Trabajo desprogramado: {JobId}", jobId);
-            }
-            else
-            {
-                _logger.LogWarning("Intento de desprogramar un trabajo que no existe: {JobId}", jobId);
-            }
-        }
-
-        /// <summary>
-        /// Actualiza la configuración de un trabajo programado existente
-        /// </summary>
-        /// <param name="config">Nueva configuración del trabajo</param>
-        public void UpdateSchedule(WorkflowScheduleConfig config)
-        {
-            if (config == null)
-                throw new ArgumentNullException(nameof(config));
-                
-            if (string.IsNullOrEmpty(config.JobId))
-                throw new ArgumentException("El ID del trabajo es obligatorio", nameof(config.JobId));
-                
-            // Eliminar el trabajo existente
-            UnscheduleWorkflow(config.JobId);
-            
-            // Programar con la nueva configuración
-            ScheduleWorkflow(config);
-            
-            _logger.LogInformation("Trabajo reprogramado: {JobId}", config.JobId);
-        }
-
-        /// <summary>
-        /// Obtiene todos los trabajos programados
-        /// </summary>
-        public IReadOnlyDictionary<string, WorkflowScheduleConfig> GetScheduledJobs()
-        {
-            return _scheduledJobs;
-        }
-
-        /// <summary>
-        /// Ejecuta un flujo de trabajo basado en su ID de trabajo
-        /// </summary>
-        /// <param name="jobId">ID del trabajo a ejecutar</param>
-        public void ExecuteWorkflow(string jobId)
-        {
-            if (!_scheduledJobs.TryGetValue(jobId, out var config))
-            {
-                _logger.LogError("Intento de ejecutar un trabajo que no existe: {JobId}", jobId);
-                return;
-            }
-            
-            try
-            {
-                _logger.LogInformation("Iniciando ejecución de flujo de trabajo: {JobId}, Workflow: {WorkflowId}",
-                    jobId, config.WorkflowId);
-                    
-                // Iniciar el flujo de trabajo
-                string instanceId = _workflowHost.StartWorkflow(
-                    config.WorkflowId,
-                    config.WorkflowVersion,
-                    config.InputData
-                ).Result;
-                
-                _logger.LogInformation("Flujo de trabajo iniciado: {JobId}, Workflow: {WorkflowId}, Instancia: {InstanceId}",
-                    jobId, config.WorkflowId, instanceId);
+                _logger.LogInformation("Trabajo programado {JobId} eliminado", jobId);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al ejecutar flujo de trabajo: {JobId}, Workflow: {WorkflowId}, Error: {Message}",
-                    jobId, config.WorkflowId, ex.Message);
+                _logger.LogError(ex, "Error al eliminar el trabajo programado {JobId}", jobId);
+                throw;
             }
         }
 
         /// <summary>
-        /// Calcula la próxima ejecución programada para un trabajo
+        /// Calcula el próximo tiempo de ejecución para una expresión cron
         /// </summary>
-        /// <param name="jobId">ID del trabajo</param>
-        /// <returns>Fecha y hora de la próxima ejecución, o null si no se puede calcular</returns>
-        public DateTime? GetNextExecution(string jobId)
+        /// <param name="cronExpression">Expresión cron</param>
+        /// <returns>Fecha y hora de la próxima ejecución</returns>
+        public DateTime? GetNextExecutionTime(string cronExpression)
         {
-            if (!_scheduledJobs.TryGetValue(jobId, out var config))
-            {
-                _logger.LogWarning("Intento de obtener próxima ejecución de un trabajo que no existe: {JobId}", jobId);
-                return null;
-            }
-            
             try
             {
-                var cronExpression = CronExpression.Parse(config.CronExpression);
-                var timeZone = TimeZoneInfo.FindSystemTimeZoneById(config.TimeZone);
-                var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZone);
-                
-                // Calcular la próxima ocurrencia
-                var nextOccurrence = cronExpression.GetNextOccurrence(now, timeZone);
-                
-                return nextOccurrence;
+                var expression = CronExpression.Parse(cronExpression);
+                return expression.GetNextOccurrence(DateTime.UtcNow, TimeZoneInfo.Utc);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al calcular próxima ejecución: {JobId}, Error: {Message}", jobId, ex.Message);
+                _logger.LogError(ex, "Error al calcular el próximo tiempo de ejecución para la expresión cron {CronExpression}",
+                    cronExpression);
                 return null;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Clase de trabajo para la ejecución de workflows
+    /// </summary>
+    public class WorkflowExecutionJob
+    {
+        private readonly IEtlWorkflowService _workflowService;
+        private readonly ILogger<WorkflowExecutionJob> _logger;
+
+        public WorkflowExecutionJob(IEtlWorkflowService workflowService, ILogger<WorkflowExecutionJob> logger)
+        {
+            _workflowService = workflowService ?? throw new ArgumentNullException(nameof(workflowService));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
+
+        /// <summary>
+        /// Ejecuta un workflow desde una tarea programada
+        /// </summary>
+        public async Task ExecuteWorkflowAsync(int workflowDefinitionId, int? scheduleId, string workflowName, string inputDataJson)
+        {
+            try
+            {
+                _logger.LogInformation("Iniciando ejecución programada del workflow {WorkflowName} (ID: {WorkflowDefinitionId})",
+                    workflowName, workflowDefinitionId);
+
+                // Ejecutar el workflow
+                var execution = await _workflowService.ExecuteWorkflowAsync(workflowDefinitionId, inputDataJson);
+
+                _logger.LogInformation("Workflow {WorkflowName} iniciado con éxito, ID de ejecución: {ExecutionId}",
+                    workflowName, execution.Id);
+
+                // Actualizar la información de la programación si es necesario
+                if (scheduleId.HasValue)
+                {
+                    await UpdateScheduleExecutionInfo(scheduleId.Value);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al ejecutar el workflow programado {WorkflowName} (ID: {WorkflowDefinitionId})",
+                    workflowName, workflowDefinitionId);
+            }
+        }
+
+        /// <summary>
+        /// Actualiza la información de ejecución de la programación
+        /// </summary>
+        private async Task UpdateScheduleExecutionInfo(int scheduleId)
+        {
+            try
+            {
+                // Llamar al servicio para actualizar el estado de la programación
+                await _workflowService.UpdateScheduleExecutionInfoAsync(scheduleId, DateTime.UtcNow);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al actualizar la información de ejecución para la programación {ScheduleId}",
+                    scheduleId);
             }
         }
     }
