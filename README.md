@@ -18,7 +18,7 @@ A flexible, powerful ETL (Extract, Transform, Load) orchestration framework for 
 
 ### Prerequisites
 
-- .NET 6.0 or later
+- .NET 8.0 or later
 - SQL Server (for workflow persistence and logging)
 
 ### Installation
@@ -33,19 +33,32 @@ A flexible, powerful ETL (Extract, Transform, Load) orchestration framework for 
    ```json
    {
      "ConnectionStrings": {
-       "DefaultConnection": "Server=your-server;Database=EtlOrchestrator;Trusted_Connection=True;MultipleActiveResultSets=true",
-       "HangfireConnection": "Server=your-server;Database=EtlOrchestratorJobs;Trusted_Connection=True;MultipleActiveResultSets=true"
+       "DefaultConnection": "Server=localhost\\SQLEXPRESS;Database=EtlOrchestrator;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True"
      }
    }
    ```
 
-3. Run the database migrations:
+3. Install the Entity Framework Core tools (if not already installed):
    ```
-   dotnet ef database update
+   dotnet tool install --global dotnet-ef
    ```
 
-4. Build and run the application:
+4. Add the Design package to the startup project:
    ```
+   cd src/Orchestrator.App/EtlOrchestrator.Orchestrator.App
+   dotnet add package Microsoft.EntityFrameworkCore.Design
+   ```
+
+5. Run the database migrations from the Infrastructure project, referencing the startup project:
+   ```
+   cd ../../Infrastructure/EtlOrchestrator.Infrastructure
+   dotnet ef migrations add InitialCreate --startup-project ../../Orchestrator.App/EtlOrchestrator.Orchestrator.App
+   dotnet ef database update --startup-project ../../Orchestrator.App/EtlOrchestrator.Orchestrator.App
+   ```
+
+6. Build and run the application:
+   ```
+   cd ../../Orchestrator.App/EtlOrchestrator.Orchestrator.App
    dotnet build
    dotnet run
    ```
