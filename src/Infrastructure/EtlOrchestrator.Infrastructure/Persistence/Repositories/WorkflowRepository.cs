@@ -122,7 +122,8 @@ namespace EtlOrchestrator.Infrastructure.Persistence.Repositories
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al crear la definición de flujo de trabajo {Name}", workflowDefinition.Name);
+                var sanitizedWorkflowName = workflowDefinition.Name?.Replace("\n", "").Replace("\r", "");
+                _logger.LogError(ex, "Error al crear la definición de flujo de trabajo {Name}", sanitizedWorkflowName);
                 throw;
             }
         }
