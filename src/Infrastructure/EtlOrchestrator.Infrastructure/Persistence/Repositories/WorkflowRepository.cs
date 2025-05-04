@@ -723,7 +723,16 @@ namespace EtlOrchestrator.Infrastructure.Persistence.Repositories
                 }
 
                 await _context.WorkflowLogs.AddAsync(workflowLog);
-                await _context.SaveChangesAsync();
+                
+                // Usar método que no dispara eventos para evitar recursión
+                await _context.Database.ExecuteSqlRawAsync(
+                    "INSERT INTO WorkflowLogs (Timestamp, LogLevel, Category, Message, Exception, WorkflowId, InstanceId, StepName, AdditionalData) " +
+                    "VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8})",
+                    workflowLog.Timestamp, workflowLog.LogLevel, workflowLog.Category, workflowLog.Message, 
+                    workflowLog.Exception ?? "", workflowLog.WorkflowId ?? "", workflowLog.InstanceId ?? "", 
+                    workflowLog.StepName ?? "", workflowLog.AdditionalData ?? "");
+                
+                // No usar SaveChangesAsync porque provocaría recursión
 
                 return workflowLog;
             }

@@ -116,6 +116,13 @@ namespace EtlOrchestrator.Infrastructure
         {
             services.AddLogging(builder =>
             {
+                // Añadir logger de consola para depuración
+                builder.AddConsole();
+                
+                // Configurar filtros para evitar recursión
+                builder.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Warning);
+                
+                // Añadir el logger de base de datos después de filtrar los mensajes de EF
                 builder.AddDatabase();
             });
         }

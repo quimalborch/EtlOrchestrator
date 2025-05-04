@@ -13,6 +13,8 @@ namespace EtlOrchestrator.Infrastructure.Logging
     {
         private readonly string _categoryName;
         private readonly Func<IWorkflowRepository> _repositoryFactory;
+        // Añadir flag para detectar recursión
+        private static AsyncLocal<bool> _isLogging = new AsyncLocal<bool>();
 
         public DatabaseLogger(string categoryName, Func<IWorkflowRepository> repositoryFactory)
         {
@@ -43,8 +45,17 @@ namespace EtlOrchestrator.Infrastructure.Logging
                 return;
             }
 
+            // Evitar recursión - si ya estamos en medio de una operación de log, no reentrar
+            if (_isLogging.Value)
+            {
+                Console.WriteLine($"Evitando recursión al registrar: {message}");
+                return;
+            }
+
             try
             {
+                _isLogging.Value = true;
+                
                 // Extraer metadatos específicos de workflow del scope (si están presentes)
                 string workflowId = null;
                 string instanceId = null;
@@ -83,6 +94,11 @@ namespace EtlOrchestrator.Infrastructure.Logging
             {
                 // Evitar bucles infinitos de registro de errores
                 Console.WriteLine($"Error al registrar en la base de datos: {ex.Message}");
+            }
+            finally
+            {
+                // Asegurarse de restablecer el flag incluso si hay excepciones
+                _isLogging.Value = false;
             }
         }
 
