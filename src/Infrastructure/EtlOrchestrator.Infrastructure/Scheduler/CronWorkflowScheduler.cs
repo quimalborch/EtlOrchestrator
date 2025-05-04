@@ -98,8 +98,10 @@ namespace EtlOrchestrator.Infrastructure.Scheduler
                     job => job.ExecuteWorkflowAsync(workflowDefinitionId, scheduleId, workflowName, inputDataJson),
                     cronExpression);
 
+                // Sanitize the cronExpression to prevent log forging
+                string sanitizedCronExpression = cronExpression.Replace(Environment.NewLine, "").Replace("\n", "").Replace("\r", "");
                 _logger.LogInformation("Workflow {WorkflowName} programado con cron {CronExpression}, jobId: {JobId}",
-                    workflowName, cronExpression, jobId);
+                    workflowName, sanitizedCronExpression, jobId);
 
                 return jobId;
             }
