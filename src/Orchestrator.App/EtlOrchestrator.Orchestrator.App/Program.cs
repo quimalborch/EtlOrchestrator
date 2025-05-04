@@ -1,4 +1,5 @@
 using EtlOrchestrator.Infrastructure;
+using Hangfire;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
 
@@ -45,6 +46,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Configurar Hangfire Dashboard sin autenticación para desarrollo
+app.UseHangfireDashboard("/hangfire");
 
 // Mapear controladores
 app.MapControllers();
