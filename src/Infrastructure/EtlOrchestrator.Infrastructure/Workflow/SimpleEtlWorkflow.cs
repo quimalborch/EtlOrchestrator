@@ -103,7 +103,7 @@ namespace EtlOrchestrator.Infrastructure.Workflow
                 _logger = logger;
             }
 
-            public override async Task<ExecutionResult> RunAsync(IStepExecutionContext context)
+            public override ExecutionResult Run(IStepExecutionContext context)
             {
                 var data = context.Workflow.Data as EtlWorkflowData;
                 
@@ -111,7 +111,7 @@ namespace EtlOrchestrator.Infrastructure.Workflow
                 
                 try
                 {
-                    data.ExtractedRecords = await _sourceConnector.ExtractAsync(data.Context);
+                    data.ExtractedRecords = _sourceConnector.ExtractAsync(data.Context).GetAwaiter().GetResult();
                     
                     var recordCount = 0;
                     if (data.ExtractedRecords != null)
@@ -147,7 +147,7 @@ namespace EtlOrchestrator.Infrastructure.Workflow
                 _logger = logger;
             }
 
-            public override async Task<ExecutionResult> RunAsync(IStepExecutionContext context)
+            public override ExecutionResult Run(IStepExecutionContext context)
             {
                 var data = context.Workflow.Data as EtlWorkflowData;
                 
@@ -162,7 +162,7 @@ namespace EtlOrchestrator.Infrastructure.Workflow
                         return ExecutionResult.Next();
                     }
                     
-                    data.TransformedRecords = await _transform.TransformAsync(data.ExtractedRecords);
+                    data.TransformedRecords = _transform.TransformAsync(data.ExtractedRecords).GetAwaiter().GetResult();
                     
                     var recordCount = 0;
                     if (data.TransformedRecords != null)
@@ -198,7 +198,7 @@ namespace EtlOrchestrator.Infrastructure.Workflow
                 _logger = logger;
             }
 
-            public override async Task<ExecutionResult> RunAsync(IStepExecutionContext context)
+            public override ExecutionResult Run(IStepExecutionContext context)
             {
                 var data = context.Workflow.Data as EtlWorkflowData;
                 
@@ -212,7 +212,7 @@ namespace EtlOrchestrator.Infrastructure.Workflow
                         return ExecutionResult.Next();
                     }
                     
-                    await _loadConnector.LoadAsync(data.TransformedRecords);
+                    _loadConnector.LoadAsync(data.TransformedRecords).GetAwaiter().GetResult();
                     
                     _logger.LogInformation("Carga completada");
                     
