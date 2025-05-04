@@ -170,8 +170,9 @@ namespace EtlOrchestrator.Infrastructure.Scheduler
             }
             catch (Exception ex)
             {
+                var sanitizedCronExpression = cronExpression?.Replace("\n", "").Replace("\r", "");
                 _logger.LogError(ex, "Error al calcular el próximo tiempo de ejecución para la expresión cron {CronExpression}",
-                    cronExpression);
+                    sanitizedCronExpression);
                 return null;
             }
         }
