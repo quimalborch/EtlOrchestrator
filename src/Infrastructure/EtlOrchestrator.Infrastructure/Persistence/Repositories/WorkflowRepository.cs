@@ -115,8 +115,9 @@ namespace EtlOrchestrator.Infrastructure.Persistence.Repositories
                 await _context.WorkflowDefinitions.AddAsync(workflowDefinition);
                 await _context.SaveChangesAsync();
 
+                var sanitizedWorkflowName = workflowDefinition.Name?.Replace("\n", "").Replace("\r", "");
                 _logger.LogInformation("Creada definición de flujo de trabajo {Name} v{Version}", 
-                    workflowDefinition.Name, workflowDefinition.Version);
+                    sanitizedWorkflowName, workflowDefinition.Version);
 
                 return workflowDefinition;
             }
