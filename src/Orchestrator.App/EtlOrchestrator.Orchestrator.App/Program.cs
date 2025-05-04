@@ -17,7 +17,7 @@ builder.Services.AddSwaggerGen(c =>
         Contact = new OpenApiContact
         {
             Name = "Equipo de Desarrollo",
-            Email = "dev@etlorchestrator.com"
+            Email = "quimalborch@gmail.com"
         }
     });
 });
