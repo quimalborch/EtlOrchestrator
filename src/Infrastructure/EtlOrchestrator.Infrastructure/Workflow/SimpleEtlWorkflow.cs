@@ -54,37 +54,21 @@ namespace EtlOrchestrator.Infrastructure.Workflow
                 .StartWith(context =>
                 {
                     _logger.LogInformation("Iniciando flujo de trabajo ETL: {WorkflowId}", Id);
-                    context.WorkflowData.StartTime = DateTime.UtcNow;
-                    context.WorkflowData.Success = true;
+                    var data = context.Workflow.Data as EtlWorkflowData;
+                    data.StartTime = DateTime.UtcNow;
+                    data.Success = true;
                 })
                 .Then<ExtractStep>()
-                    .OnError(WorkflowErrorHandling.Terminate, (data, context) =>
-                    {
-                        data.Success = false;
-                        data.ErrorMessage = context.Exception.Message;
-                        data.EndTime = DateTime.UtcNow;
-                        _logger.LogError(context.Exception, "Error en el paso de extracción: {Message}", context.Exception.Message);
-                    })
+                    .OnError(WorkflowErrorHandling.Terminate)
                 .Then<TransformStep>()
-                    .OnError(WorkflowErrorHandling.Terminate, (data, context) =>
-                    {
-                        data.Success = false;
-                        data.ErrorMessage = context.Exception.Message;
-                        data.EndTime = DateTime.UtcNow;
-                        _logger.LogError(context.Exception, "Error en el paso de transformación: {Message}", context.Exception.Message);
-                    })
+                    .OnError(WorkflowErrorHandling.Terminate)
                 .Then<LoadStep>()
-                    .OnError(WorkflowErrorHandling.Terminate, (data, context) =>
-                    {
-                        data.Success = false;
-                        data.ErrorMessage = context.Exception.Message;
-                        data.EndTime = DateTime.UtcNow;
-                        _logger.LogError(context.Exception, "Error en el paso de carga: {Message}", context.Exception.Message);
-                    })
+                    .OnError(WorkflowErrorHandling.Terminate)
                 .Then(context =>
                 {
-                    context.WorkflowData.EndTime = DateTime.UtcNow;
-                    var duration = context.WorkflowData.EndTime.Value - context.WorkflowData.StartTime;
+                    var data = context.Workflow.Data as EtlWorkflowData;
+                    data.EndTime = DateTime.UtcNow;
+                    var duration = data.EndTime.Value - data.StartTime;
                     _logger.LogInformation("Flujo de trabajo ETL completado: {WorkflowId}. Duración: {Duration}", Id, duration);
                 });
         }
@@ -223,6 +207,35 @@ namespace EtlOrchestrator.Infrastructure.Workflow
                     _logger.LogError(ex, "Error en el paso de carga: {Message}", ex.Message);
                     throw;
                 }
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Manejador de errores global para el flujo de trabajo ETL
+    /// </summary>
+    public class EtlWorkflowErrorHandler : IWorkflowErrorHandler
+    {
+        private readonly ILogger<EtlWorkflowErrorHandler> _logger;
+        
+        public EtlWorkflowErrorHandler(ILogger<EtlWorkflowErrorHandler> logger)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
+        
+        public WorkflowErrorHandling Type => WorkflowErrorHandling.Terminate;
+        
+        public void Handle(WorkflowInstance workflow, WorkflowDefinition def, ExecutionPointer pointer, WorkflowStep step, Exception exception, Queue<ExecutionPointer> bubbleUpQueue)
+        {
+            var data = workflow.Data as EtlWorkflowData;
+            if (data != null)
+            {
+                data.Success = false;
+                data.ErrorMessage = exception.Message;
+                data.EndTime = DateTime.UtcNow;
+                
+                var stepName = step?.Name ?? "Desconocido";
+                _logger.LogError(exception, "Error en el paso '{StepName}': {Message}", stepName, exception.Message);
             }
         }
     }
