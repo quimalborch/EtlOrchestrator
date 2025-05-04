@@ -75,7 +75,7 @@ namespace EtlOrchestrator.Infrastructure
         private static void RegisterWorkflows(IServiceCollection services)
         {
             // Registrar el flujo de trabajo simple
-            services.AddTransient<IWorkflow, SimpleEtlWorkflow>();
+            services.AddTransient<IWorkflow<EtlWorkflowData>, SimpleEtlWorkflow>();
 
             // Aquí se pueden agregar más workflows a medida que se implementen
         }
