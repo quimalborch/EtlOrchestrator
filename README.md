@@ -4,6 +4,11 @@ A flexible, powerful ETL (Extract, Transform, Load) orchestration framework for 
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![.NET Tests](https://github.com/quimalborch/EtlOrchestrator/actions/workflows/dotnet-tests.yml/badge.svg)](https://github.com/quimalborch/EtlOrchestrator/actions/workflows/dotnet-tests.yml)
+[![.NET](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/download/dotnet/8.0)
+[![GitHub last commit](https://img.shields.io/github/last-commit/quimalborch/EtlOrchestrator)](https://github.com/quimalborch/EtlOrchestrator/commits/main)
+[![GitHub repo size](https://img.shields.io/github/repo-size/quimalborch/EtlOrchestrator)](https://github.com/quimalborch/EtlOrchestrator)
+[![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/quimalborch/EtlOrchestrator)](https://github.com/quimalborch/EtlOrchestrator)
+[![GitHub open issues by-label](https://img.shields.io/github/issues/quimalborch/EtlOrchestrator/bug)](https://github.com/quimalborch/EtlOrchestrator/issues?q=is%3Aissue+is%3Aopen+label%3Abug)
 
 ## Features
 
