@@ -48,7 +48,8 @@ namespace EtlOrchestrator.Infrastructure.Services
         {
             try
             {
-                _logger.LogInformation("Creando nueva definición de workflow: {Name}", name);
+                var sanitizedName = name?.Replace("\r", "").Replace("\n", "");
+                _logger.LogInformation("Creando nueva definición de workflow: {Name}", sanitizedName);
                 
                 // Validar que el JSON sea válido
                 if (!string.IsNullOrEmpty(configurationJson))
