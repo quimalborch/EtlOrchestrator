@@ -54,8 +54,12 @@ namespace EtlOrchestrator.Infrastructure.Connectors
                     
                     _logger.LogInformation("Extracción completada. Se obtuvieron {Count} registros", result.Count());
                     
-                    // Convertir los resultados a Records
-                    var records = result.Select(row => ConvertToRecord(row)).ToList();
+                    // Convertir los resultados dinámicos a Records uno por uno
+                    var records = new List<Record>();
+                    foreach (var row in result)
+                    {
+                        records.Add(ConvertToRecord(row));
+                    }
                     return records;
                 }
             }
