@@ -46,7 +46,7 @@ namespace EtlOrchestrator.Infrastructure
             services.AddScoped<ILoadConnector, SqlServerLoadConnector>();
 
             // Registrar repositorios
-            services.AddScoped<IWorkflowRepository, WorkflowRepository>();
+            services.AddScoped<EtlOrchestrator.Infrastructure.Persistence.Repositories.IWorkflowRepository, WorkflowRepository>();
 
             // Registrar servicios
             services.AddScoped<IEtlWorkflowService, EtlWorkflowService>();
