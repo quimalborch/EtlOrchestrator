@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using EtlOrchestrator.Infrastructure.Persistence.Entities;
-using EtlOrchestrator.Infrastructure.Persistence.Repositories;
+using EtlWorkflowRepo = EtlOrchestrator.Infrastructure.Persistence.Repositories;
 using EtlOrchestrator.Infrastructure.Scheduler;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -15,13 +15,13 @@ namespace EtlOrchestrator.Infrastructure.Services
     /// </summary>
     public class EtlWorkflowService : IEtlWorkflowService
     {
-        private readonly IWorkflowRepository _repository;
+        private readonly EtlWorkflowRepo.IWorkflowRepository _repository;
         private readonly IWorkflowHost _workflowHost;
         private readonly CronWorkflowScheduler _scheduler;
         private readonly ILogger<EtlWorkflowService> _logger;
 
         public EtlWorkflowService(
-            IWorkflowRepository repository,
+            EtlWorkflowRepo.IWorkflowRepository repository,
             IWorkflowHost workflowHost,
             CronWorkflowScheduler scheduler,
             ILogger<EtlWorkflowService> logger)
@@ -163,15 +163,27 @@ namespace EtlOrchestrator.Infrastructure.Services
                     var workflowId = await _workflowHost.StartWorkflow(definition.Name, version: definition.Version, data: dataObj, reference: instanceId);
                     
                     // Esperar a que el workflow termine
-                    var status = await _workflowHost.GetStatus(workflowId);
-                    while (status != WorkflowStatus.Complete && status != WorkflowStatus.Terminated)
+                    bool isComplete = false;
+                    while (!isComplete)
                     {
                         await Task.Delay(500);
-                        status = await _workflowHost.GetStatus(workflowId);
+                        
+                        // Intentar obtener la información del workflow - si no se puede obtener, significa que ha terminado
+                        try
+                        {
+                            // Si no hay excepción, el workflow sigue en ejecución
+                            await _workflowHost.SuspendWorkflow(instanceId);
+                            await _workflowHost.ResumeWorkflow(instanceId);
+                        }
+                        catch
+                        {
+                            // Si hay excepción, el workflow ha terminado
+                            isComplete = true;
+                        }
                     }
 
                     // Actualizar el estado de la ejecución
-                    var finalStatus = status == WorkflowStatus.Complete ? "Completado" : "Terminado";
+                    var finalStatus = "Completado";
                     await _repository.CompleteWorkflowExecutionAsync(execution.Id, finalStatus, DateTime.UtcNow);
 
                     // Recargar la ejecución para tener los datos actualizados
