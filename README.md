@@ -266,38 +266,6 @@ Our testing strategy follows industry best practices:
 4. **Parameterized Tests**: Use xUnit's theory tests for testing multiple data scenarios
 5. **Integration with CI/CD**: Automatic test execution on every push or pull request
 
-### Testing in Open-Source ETL Projects
-
-Here's how other popular open-source ETL projects approach testing:
-
-#### Apache NiFi
-
-- Uses JUnit for extensive unit testing
-- JMeter for performance testing
-- Integration tests that verify end-to-end flows
-- Extensive documentation of testing procedures
-
-#### Apache Airflow
-
-- Uses pytest for Python-based tests
-- Combines unit and integration tests
-- Uses pytest fixtures for test setup
-- Containerized tests using Docker
-
-#### DBT (Data Build Tool)
-
-- Extensive unit test suite using pytest
-- Custom test harnesses for testing SQL transformations
-- Integration tests with multiple database backends
-- Community-driven test contributions
-
-#### Luigi (Spotify)
-
-- Standard Python unittest framework
-- Mock objects for external dependencies
-- Parameterized tests for different scenarios
-- Central test runner for consistency
-
 ### Continuous Integration
 
 ETL Orchestrator uses GitHub Actions to automatically run tests on every push and pull request. The workflow configuration can be found in `.github/workflows/dotnet-tests.yml`.
