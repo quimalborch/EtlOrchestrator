@@ -1,5 +1,4 @@
 using EtlOrchestrator.Infrastructure;
-using Hangfire;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
 
@@ -14,10 +13,10 @@ builder.Services.AddSwaggerGen(c =>
     {
         Title = "ETL Orchestrator API",
         Version = "v1",
-        Description = "API para la gestión de flujos de trabajo ETL",
+        Description = "API for ETL workflow management",
         Contact = new OpenApiContact
         {
-            Name = "Equipo de Desarrollo",
+            Name = "Developer",
             Email = "quimalborch@gmail.com"
         }
     });
@@ -47,31 +46,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// Configurar Hangfire Dashboard sin autenticación para desarrollo
-app.UseHangfireDashboard("/hangfire");
-
 // Mapear controladores
 app.MapControllers();
-
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast")
-.WithOpenApi();
 
 app.Run();
 
