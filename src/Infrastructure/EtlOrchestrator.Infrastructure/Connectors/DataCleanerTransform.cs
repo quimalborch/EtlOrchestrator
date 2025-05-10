@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using EtlOrchestrator.Core;
 using EtlOrchestrator.Core.Connectors;
+using EtlOrchestrator.Infrastructure.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace EtlOrchestrator.Infrastructure.Connectors
