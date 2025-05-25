@@ -9,6 +9,7 @@ A flexible, powerful ETL (Extract, Transform, Load) orchestration framework for 
 [![GitHub repo size](https://img.shields.io/github/repo-size/quimalborch/EtlOrchestrator)](https://github.com/quimalborch/EtlOrchestrator)
 [![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/quimalborch/EtlOrchestrator)](https://github.com/quimalborch/EtlOrchestrator)
 [![GitHub open issues by-label](https://img.shields.io/github/issues/quimalborch/EtlOrchestrator/bug)](https://github.com/quimalborch/EtlOrchestrator/issues?q=is%3Aissue+is%3Aopen+label%3Abug)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/quimalborch/EtlOrchestrator)
 
 ## Features
 
